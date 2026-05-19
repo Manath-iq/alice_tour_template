@@ -352,7 +352,7 @@ input:focus-visible,
   background:
     linear-gradient(90deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.86) 26%, rgba(255, 255, 255, 0.18) 54%, rgba(255, 255, 255, 0.02) 100%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0) 50%, #ffffff 96%),
-    url("assets/hero_section_bg.png") center right / cover no-repeat;
+    url("assets/hero_section_bg.png?v=2") center right / cover no-repeat;
   transform: scale(1.01);
   animation: heroDrift 18s var(--ease) infinite alternate;
 }
@@ -1359,7 +1359,7 @@ input[type="range"]::-webkit-slider-thumb {
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.72) 45%, rgba(255, 255, 255, 0.12) 100%),
       linear-gradient(180deg, rgba(255, 255, 255, 0) 65%, #ffffff 98%),
-      url("assets/hero_section_bg.png") 68% center / cover no-repeat;
+      url("assets/hero_section_bg.png?v=2") 68% center / cover no-repeat;
   }
 
   .hero__plane {
