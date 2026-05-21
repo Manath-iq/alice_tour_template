@@ -141,3 +141,116 @@ document.querySelectorAll(".tour-card button").forEach((button) => {
 
 updateRange();
 updateQuiz();
+
+/* ─── Scroll-driven video background ─────────────────────────────── */
+(function () {
+  const videoBg    = document.getElementById('videoBg');
+  const video      = document.getElementById('bgVideo');
+  if (!videoBg || !video) return;
+
+  const quizSection = document.getElementById('quiz');
+  if (!quizSection) return;
+
+  // ── Replace <video> with a canvas for flicker-free frame rendering ──
+  const canvas  = document.createElement('canvas');
+  const ctx     = canvas.getContext('2d', { alpha: false });
+  canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;';
+  video.style.display  = 'none';
+  videoBg.appendChild(canvas);
+
+  let duration     = 0;
+  let targetTime   = 0;   // where scroll wants us to be
+  let displayTime  = 0;   // where we actually are (lerped)
+  let rafId        = null;
+  let ready        = false;
+
+  // ── Resize canvas to match video ────────────────────────────────────
+  function resizeCanvas() {
+    if (!video.videoWidth) return;
+    canvas.width  = video.videoWidth;
+    canvas.height = video.videoHeight;
+  }
+
+  // ── Draw current video frame to canvas ──────────────────────────────
+  function drawFrame() {
+    if (!ctx || !video.videoWidth) return;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  }
+
+  // ── Compute scroll metrics ───────────────────────────────────────────
+  function getZone() {
+    const quizTop  = quizSection.getBoundingClientRect().top + window.scrollY;
+    const docH     = document.documentElement.scrollHeight;
+    const winH     = window.innerHeight;
+    return { quizTop, zoneEnd: docH - winH, winH };
+  }
+
+  // ── Main animation loop ─────────────────────────────────────────────
+  function loop() {
+    rafId = requestAnimationFrame(loop);
+    if (!ready || !duration) return;
+
+    const scrollY = window.scrollY;
+    const { quizTop, zoneEnd, winH } = getZone();
+
+    // Progress [0..1] within the scrollable zone
+    const zoneLen   = Math.max(1, zoneEnd - quizTop);
+    const progress  = Math.max(0, Math.min(1, (scrollY - quizTop) / zoneLen));
+    targetTime      = progress * duration;
+
+    // Opacity: fade in as we approach quiz, stay on, fade out at bottom
+    let opacity;
+    if (scrollY < quizTop - 80) {
+      opacity = 0;
+    } else if (scrollY < quizTop) {
+      opacity = (scrollY - (quizTop - 80)) / 80;
+    } else if (progress >= 1) {
+      opacity = Math.max(0, 1 - (scrollY - zoneEnd) / winH * 3);
+    } else {
+      opacity = 1;
+    }
+    videoBg.classList.toggle('is-visible', opacity > 0.01);
+
+    // Lerp displayTime toward targetTime for smooth motion
+    const diff = targetTime - displayTime;
+    if (Math.abs(diff) < 0.001) return;          // already there
+
+    // Lerp factor: faster when far, slower when close (ease-out feel)
+    const lerpFactor = Math.min(0.28, Math.abs(diff) * 0.9);
+    displayTime += diff * lerpFactor;
+
+    // Clamp to valid range
+    displayTime = Math.max(0, Math.min(duration, displayTime));
+
+    // Seek & draw
+    if (Math.abs(video.currentTime - displayTime) > 1 / 48) {
+      video.currentTime = displayTime;
+    }
+    drawFrame();
+  }
+
+  // ── Init once video is ready ─────────────────────────────────────────
+  function onReady() {
+    duration = video.duration;
+    resizeCanvas();
+    video.currentTime = 0;
+    drawFrame();
+    ready = true;
+    rafId = requestAnimationFrame(loop);
+  }
+
+  // Wait for enough data to seek freely
+  if (video.readyState >= 4) {          // HAVE_ENOUGH_DATA
+    onReady();
+  } else {
+    video.addEventListener('canplaythrough', onReady, { once: true });
+    // Fallback: start as soon as metadata & first frame are available
+    video.addEventListener('loadeddata', () => {
+      if (!ready) onReady();
+    }, { once: true });
+  }
+
+  // Force the browser to load the full file
+  video.load();
+})();
+/* ─────────────────────────────────────────────────────────────────── */
