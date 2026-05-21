@@ -143,6 +143,9 @@ button {
   transform: translateY(-1px) rotate(-20deg);
   color: var(--blue);
   font-size: 1.15em;
+  /* Force text (not emoji) rendering on iOS/Android */
+  font-family: "Segoe UI Symbol", "Apple Symbols", Arial, sans-serif;
+  font-variant-emoji: text;
 }
 
 .nav {
