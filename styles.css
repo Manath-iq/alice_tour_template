@@ -1191,7 +1191,7 @@ input[type="range"]::-webkit-slider-thumb {
   display: grid;
   grid-template-columns: 0.9fr 1.1fr;
   gap: 46px;
-  align-items: center;
+  align-items: stretch;
   padding: clamp(18px, 2.5vw, 28px);
   border: 1px solid rgba(16, 33, 75, 0.08);
   border-radius: 32px;
@@ -1202,9 +1202,11 @@ input[type="range"]::-webkit-slider-thumb {
 .about-panel__image,
 .map-widget {
   position: relative;
-  min-height: 460px;
+  min-height: 360px;
+  height: 100%;
   overflow: hidden;
   border-radius: 24px;
+  align-self: stretch;
 }
 
 .about-panel__image {
