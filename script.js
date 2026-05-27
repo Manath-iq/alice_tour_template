@@ -1,3 +1,4 @@
+/* ─── Quiz State ─────────────────────────────────────────────────── */
 const state = {
   step: 0,
   maxStep: 4,
@@ -56,7 +57,6 @@ document.querySelectorAll("[data-choice-group]").forEach((group) => {
   group.addEventListener("click", (event) => {
     const card = event.target.closest(".choice-card");
     if (!card) return;
-
     group.querySelectorAll(".choice-card").forEach((item) => item.classList.remove("is-selected"));
     card.classList.add("is-selected");
   });
@@ -75,12 +75,10 @@ nextButton.addEventListener("click", () => {
     updateQuiz();
     return;
   }
-
   if (state.step === state.maxStep) {
     showSuccess();
     return;
   }
-
   state.step += 1;
   updateQuiz();
   quizShell.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -92,13 +90,13 @@ prevButton.addEventListener("click", () => {
     updateQuiz();
     return;
   }
-
   state.step = Math.max(0, state.step - 1);
   updateQuiz();
 });
 
 budgetRange.addEventListener("input", updateRange);
 
+/* ─── Mobile Menu ────────────────────────────────────────────────── */
 menuToggle.addEventListener("click", () => {
   const isOpen = menuToggle.classList.toggle("is-open");
   mobileMenu.classList.toggle("is-open", isOpen);
@@ -114,6 +112,7 @@ mobileMenu.addEventListener("click", (event) => {
   mobileMenu.setAttribute("aria-hidden", "true");
 });
 
+/* ─── Scroll Reveal ──────────────────────────────────────────────── */
 const observer = new IntersectionObserver(
   (entries) => {
     entries.forEach((entry) => {
@@ -123,14 +122,15 @@ const observer = new IntersectionObserver(
       }
     });
   },
-  { threshold: 0.14 }
+  { threshold: 0.12 }
 );
 
 document.querySelectorAll("[data-reveal]").forEach((element, index) => {
-  element.style.transitionDelay = `${Math.min(index * 45, 260)}ms`;
+  element.style.transitionDelay = `${Math.min(index * 50, 280)}ms`;
   observer.observe(element);
 });
 
+/* ─── Tour Cards → Quiz ──────────────────────────────────────────── */
 document.querySelectorAll(".tour-card button").forEach((button) => {
   button.addEventListener("click", () => {
     document.querySelector("#quiz").scrollIntoView({ behavior: "smooth" });
@@ -139,53 +139,237 @@ document.querySelectorAll(".tour-card button").forEach((button) => {
   });
 });
 
+/* ─── Header scroll state ────────────────────────────────────────── */
+const siteHeader = document.getElementById("siteHeader");
+function updateHeader() {
+  siteHeader.classList.toggle("is-scrolled", window.scrollY > 60);
+}
+window.addEventListener("scroll", updateHeader, { passive: true });
+
+/* ─── Active Nav Highlight on Scroll ────────────────────────────── */
+const navLinks = Array.from(document.querySelectorAll("[data-nav]"));
+const sections = navLinks.map((link) => {
+  const id = link.getAttribute("href").replace("#", "");
+  return document.getElementById(id);
+}).filter(Boolean);
+
+const navObserver = new IntersectionObserver(
+  (entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        navLinks.forEach((link) => {
+          link.classList.toggle("is-active", link.getAttribute("href") === `#${id}`);
+        });
+      }
+    });
+  },
+  { rootMargin: "-40% 0px -55% 0px" }
+);
+
+sections.forEach((section) => navObserver.observe(section));
+
+/* ─── Sticky CTA ─────────────────────────────────────────────────── */
+(function () {
+  const stickyCta = document.getElementById("stickyCta");
+  const heroSection = document.getElementById("hero");
+  const quizSection = document.getElementById("quiz");
+  if (!stickyCta || !heroSection) return;
+
+  let ctaVisible = false;
+
+  function updateStickyCta() {
+    const heroBottom = heroSection.getBoundingClientRect().bottom;
+    const quizTop = quizSection ? quizSection.getBoundingClientRect().top : Infinity;
+
+    // Show after hero passes, hide when quiz is visible in viewport
+    const shouldShow = heroBottom < 0 && quizTop > window.innerHeight * 0.6;
+
+    if (shouldShow !== ctaVisible) {
+      ctaVisible = shouldShow;
+      stickyCta.setAttribute("aria-hidden", String(!shouldShow));
+      if (shouldShow) {
+        stickyCta.classList.add("is-visible");
+        stickyCta.classList.remove("is-hidden");
+      } else {
+        stickyCta.classList.remove("is-visible");
+        stickyCta.classList.add("is-hidden");
+      }
+    }
+  }
+
+  window.addEventListener("scroll", updateStickyCta, { passive: true });
+  updateStickyCta();
+})();
+
+/* ─── Hot Tours Countdown Timer ──────────────────────────────────── */
+(function () {
+  const hoursEl = document.getElementById("cdHours");
+  const minutesEl = document.getElementById("cdMinutes");
+  const secondsEl = document.getElementById("cdSeconds");
+  if (!hoursEl || !minutesEl || !secondsEl) return;
+
+  // Store end time in sessionStorage so it persists on refresh
+  const storageKey = "alice_tour_countdown_end";
+  let endTime = parseInt(sessionStorage.getItem(storageKey), 10);
+  if (!endTime || endTime < Date.now()) {
+    // Random between 4 and 23 hours from now
+    const hours = Math.floor(Math.random() * 19) + 4;
+    endTime = Date.now() + hours * 3600 * 1000;
+    sessionStorage.setItem(storageKey, String(endTime));
+  }
+
+  function pad(n) {
+    return String(n).padStart(2, "0");
+  }
+
+  function tick() {
+    const diff = Math.max(0, endTime - Date.now());
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    hoursEl.textContent = pad(h);
+    minutesEl.textContent = pad(m);
+    secondsEl.textContent = pad(s);
+
+    if (diff <= 0) {
+      clearInterval(countdownInterval);
+    }
+  }
+
+  tick();
+  const countdownInterval = setInterval(tick, 1000);
+})();
+
+/* ─── Count-up Numbers in About ─────────────────────────────────── */
+(function () {
+  function animateCount(el, target, duration = 1600, isDecimal = false) {
+    const start = 0;
+    const startTime = performance.now();
+
+    function update(currentTime) {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // Ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const value = start + (target - start) * eased;
+
+      if (isDecimal) {
+        el.textContent = value.toFixed(1);
+      } else {
+        el.textContent = Math.floor(value) + "+";
+      }
+
+      if (progress < 1) {
+        requestAnimationFrame(update);
+      } else {
+        el.textContent = isDecimal ? target.toFixed(1) : target + "+";
+      }
+    }
+
+    requestAnimationFrame(update);
+  }
+
+  const countObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+
+        const intEls = entry.target.querySelectorAll(".count-up");
+        intEls.forEach((el) => {
+          const target = parseInt(el.dataset.target, 10);
+          animateCount(el, target, 1600, false);
+        });
+
+        const decEls = entry.target.querySelectorAll(".count-up-dec");
+        decEls.forEach((el) => {
+          const target = parseFloat(el.dataset.target);
+          animateCount(el, target, 1600, true);
+        });
+
+        countObserver.unobserve(entry.target);
+      });
+    },
+    { threshold: 0.4 }
+  );
+
+  const statsRow = document.querySelector(".stats-row");
+  if (statsRow) countObserver.observe(statsRow);
+})();
+
+/* ─── Ripple effect on tour card buttons ────────────────────────── */
+document.querySelectorAll(".tour-card button").forEach((btn) => {
+  btn.addEventListener("click", function (e) {
+    const rect = btn.getBoundingClientRect();
+    const ripple = document.createElement("span");
+    ripple.style.cssText = `
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.35);
+      width: 8px; height: 8px;
+      top: ${e.clientY - rect.top - 4}px;
+      left: ${e.clientX - rect.left - 4}px;
+      transform: scale(1);
+      animation: rippleAnim 600ms ease-out forwards;
+      pointer-events: none;
+    `;
+    btn.style.position = "relative";
+    btn.style.overflow = "hidden";
+    btn.appendChild(ripple);
+    ripple.addEventListener("animationend", () => ripple.remove());
+  });
+});
+
+// Inject ripple keyframes
+const rippleStyle = document.createElement("style");
+rippleStyle.textContent = `@keyframes rippleAnim {
+  to { transform: scale(28); opacity: 0; }
+}`;
+document.head.appendChild(rippleStyle);
+
+/* ─── Init ───────────────────────────────────────────────────────── */
 updateRange();
 updateQuiz();
 
-/* ─── Scroll-driven video background ─────────────────────────────── */
+/* ─── Scroll-driven video background ────────────────────────────── */
 (function () {
-  const videoBg    = document.getElementById('videoBg');
-  const video      = document.getElementById('bgVideo');
+  const videoBg   = document.getElementById('videoBg');
+  const video     = document.getElementById('bgVideo');
   if (!videoBg || !video) return;
 
   const quizSection = document.getElementById('quiz');
   if (!quizSection) return;
 
-  // ── Replace <video> with a canvas for flicker-free frame rendering ──
-  const canvas  = document.createElement('canvas');
-  const ctx     = canvas.getContext('2d', { alpha: false });
+  const canvas = document.createElement('canvas');
+  const ctx    = canvas.getContext('2d', { alpha: false });
   canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;';
-  video.style.display  = 'none';
+  video.style.display = 'none';
   videoBg.appendChild(canvas);
 
-  let duration     = 0;
-  let targetTime   = 0;   // where scroll wants us to be
-  let displayTime  = 0;   // where we actually are (lerped)
-  let rafId        = null;
-  let ready        = false;
+  let duration    = 0;
+  let targetTime  = 0;
+  let displayTime = 0;
+  let rafId       = null;
+  let ready       = false;
 
-  // ── Resize canvas to match video ────────────────────────────────────
   function resizeCanvas() {
     if (!video.videoWidth) return;
     canvas.width  = video.videoWidth;
     canvas.height = video.videoHeight;
   }
 
-  // ── Draw current video frame to canvas ──────────────────────────────
   function drawFrame() {
     if (!ctx || !video.videoWidth) return;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
   }
 
-  // ── Compute scroll metrics ───────────────────────────────────────────
   function getZone() {
-    const quizTop  = quizSection.getBoundingClientRect().top + window.scrollY;
-    const docH     = document.documentElement.scrollHeight;
-    const winH     = window.innerHeight;
+    const quizTop = quizSection.getBoundingClientRect().top + window.scrollY;
+    const docH    = document.documentElement.scrollHeight;
+    const winH    = window.innerHeight;
     return { quizTop, zoneEnd: docH - winH, winH };
   }
 
-  // ── Main animation loop ─────────────────────────────────────────────
   function loop() {
     rafId = requestAnimationFrame(loop);
     if (!ready || !duration) return;
@@ -193,12 +377,10 @@ updateQuiz();
     const scrollY = window.scrollY;
     const { quizTop, zoneEnd, winH } = getZone();
 
-    // Progress [0..1] within the scrollable zone
-    const zoneLen   = Math.max(1, zoneEnd - quizTop);
-    const progress  = Math.max(0, Math.min(1, (scrollY - quizTop) / zoneLen));
-    targetTime      = progress * duration;
+    const zoneLen  = Math.max(1, zoneEnd - quizTop);
+    const progress = Math.max(0, Math.min(1, (scrollY - quizTop) / zoneLen));
+    targetTime     = progress * duration;
 
-    // Opacity: fade in as we approach quiz, stay on, fade out at bottom
     let opacity;
     if (scrollY < quizTop - 80) {
       opacity = 0;
@@ -211,25 +393,19 @@ updateQuiz();
     }
     videoBg.classList.toggle('is-visible', opacity > 0.01);
 
-    // Lerp displayTime toward targetTime for smooth motion
     const diff = targetTime - displayTime;
-    if (Math.abs(diff) < 0.001) return;          // already there
+    if (Math.abs(diff) < 0.001) return;
 
-    // Lerp factor: faster when far, slower when close (ease-out feel)
     const lerpFactor = Math.min(0.28, Math.abs(diff) * 0.9);
     displayTime += diff * lerpFactor;
-
-    // Clamp to valid range
     displayTime = Math.max(0, Math.min(duration, displayTime));
 
-    // Seek & draw
     if (Math.abs(video.currentTime - displayTime) > 1 / 48) {
       video.currentTime = displayTime;
     }
     drawFrame();
   }
 
-  // ── Init once video is ready ─────────────────────────────────────────
   function onReady() {
     duration = video.duration;
     resizeCanvas();
@@ -239,18 +415,12 @@ updateQuiz();
     rafId = requestAnimationFrame(loop);
   }
 
-  // Wait for enough data to seek freely
-  if (video.readyState >= 4) {          // HAVE_ENOUGH_DATA
+  if (video.readyState >= 4) {
     onReady();
   } else {
     video.addEventListener('canplaythrough', onReady, { once: true });
-    // Fallback: start as soon as metadata & first frame are available
-    video.addEventListener('loadeddata', () => {
-      if (!ready) onReady();
-    }, { once: true });
+    video.addEventListener('loadeddata', () => { if (!ready) onReady(); }, { once: true });
   }
 
-  // Force the browser to load the full file
   video.load();
 })();
-/* ─────────────────────────────────────────────────────────────────── */
